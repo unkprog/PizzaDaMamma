@@ -77,6 +77,7 @@ table.striped > tbody > tr:nth-child(odd) {
     padding: 0.5rem;
     border: 1px solid rgba(255,255,255,.12);
     border-radius: 0.2rem;
+    cursor: pointer;
 }
 
     .card-table-footer-button:hover {

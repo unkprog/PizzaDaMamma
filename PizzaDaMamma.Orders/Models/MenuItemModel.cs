@@ -4,7 +4,7 @@ namespace PizzaDaMamma.Orders.Models
 {
     public class MenuItemModel
     {
-        [JsonPropertyName("Name")]
+        [JsonPropertyName("Наименование")]
         public string Name { get; set; }
         [JsonPropertyName("Изображение")]
         public string Image { get; set; }
@@ -23,5 +23,8 @@ namespace PizzaDaMamma.Orders.Models
 
         [JsonPropertyName("Жиры")]
         public string Fats { get; set; }
+        [JsonPropertyName("Цена")]
+        public string Price { get; set; }
+        
     }
 }
