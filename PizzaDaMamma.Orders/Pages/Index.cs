@@ -1,4 +1,6 @@
-﻿using System.IO;
+﻿using System.Collections.Generic;
+using System.IO;
+using System.Linq;
 using System.Text;
 using System.Text.Json;
 using Microsoft.AspNetCore.Hosting;
@@ -17,12 +19,46 @@ namespace PizzaDaMamma.Orders.Pages
             if (File.Exists(file))
             {
                 result = readFileAsString(file);
+                string dataItemsStr = loadIndexJson(env);
+                MenuItemModel[] dataItems = ToItems(dataItemsStr);
+                result = result.Replace("<!--here-->", build(dataItems));
 
-                MenuItemModel[] items = loadData(env);
+                Dictionary<string, string> ingridientsAll = new Dictionary<string, string>();
+                string ingr;
+                foreach(var item in dataItems)
+                {
+                    foreach(var itemIngr in item.Ingridients)
+                    {
+                        if (!ingridientsAll.TryGetValue(itemIngr, out ingr))
+                            ingridientsAll.Add(itemIngr, itemIngr);
+                    }
+                }
 
-                result = result.Replace("<!--here-->", build(items));
+                result = result.Replace("//<!--data here-->", "window.Index.Data.Items = " + dataItemsStr + "; window.Index.Data.Ingridients = " + JsonSerializer.Serialize(ingridientsAll.Values.ToArray()) + ";");
+                
             }
             return result;
+        }
+
+        private static string loadIndexJson(IWebHostEnvironment env)
+        {
+            string result = string.Empty;
+
+            System.Type t = typeof(Startup);
+            string file = string.Concat(t.Assembly.Location.Replace(t.Assembly.ManifestModule.Name, string.Empty), env.IsDevelopment() ? @"..\..\..\" : string.Empty, @"wwwroot\data\index.json");
+            if (File.Exists(file))
+                result = readFileAsString(file);
+            return result;
+        }
+
+        private static MenuItemModel[] ToItems(string json)
+        {
+            var options = new JsonSerializerOptions
+            {
+                AllowTrailingCommas = true,
+                Encoder = System.Text.Encodings.Web.JavaScriptEncoder.Create(System.Text.Unicode.UnicodeRanges.All) // System.Text.Encodings.Web.JavaScriptEncoder.UnsafeRelaxedJsonEscaping
+            };
+            return JsonSerializer.Deserialize<MenuItemModel[]>(json, options);
         }
 
         private static string build(MenuItemModel[] items)
@@ -35,11 +71,11 @@ namespace PizzaDaMamma.Orders.Pages
                 string desc = string.Join(", ", item.Ingridients);
                 string html = @$"
         <div class='pdm-col'>
-            <div class='card-header'>
+            <h1 class='card-header'>
                 {item.Name}
-            </div>
+            </h1>
             <div class='card-image'>
-                <img src='img/menu/{item.Image}' />
+                <img src='/img/menu/{item.Image}' />
             </div>
             <div class='card-description'>
                 {desc}
@@ -79,7 +115,7 @@ namespace PizzaDaMamma.Orders.Pages
                 <tbody>
                     <tr class='card-table-footer-row'>
                         <td class='card-table-footer-td card-table-footer-price'>{item.Price}</td>
-                        <td class='card-table-footer-td card-table-footer-button'>Выбрать</td>
+                        <td class='card-table-footer-td card-table-footer-button' data-index='{i}'>Выбрать</td>
                     </tr>
                 </tbody>
             </table>
@@ -90,25 +126,7 @@ namespace PizzaDaMamma.Orders.Pages
             return result.ToString();
         }
 
-        private static MenuItemModel[] loadData(IWebHostEnvironment env)
-        {
-            MenuItemModel[] result = null;
-
-            System.Type t = typeof(Startup);
-            string file = string.Concat(t.Assembly.Location.Replace(t.Assembly.ManifestModule.Name, string.Empty), env.IsDevelopment() ? @"..\..\..\" : string.Empty, @"wwwroot\data\index.json");
-            if (File.Exists(file))
-            {
-                string json = readFileAsString(file);
-                var options = new JsonSerializerOptions
-                {
-                    AllowTrailingCommas = true,
-                    Encoder = System.Text.Encodings.Web.JavaScriptEncoder.Create(System.Text.Unicode.UnicodeRanges.All) // System.Text.Encodings.Web.JavaScriptEncoder.UnsafeRelaxedJsonEscaping
-                };
-
-                result = JsonSerializer.Deserialize<MenuItemModel[]>(json, options);
-            }
-            return result;
-        }
+        
 
         private static string readFileAsString(string aFileName, Encoding enc = null)
         {
